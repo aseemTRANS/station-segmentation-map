@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Northern Rail Catchment & Consumer Segmentation Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link href="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.css" rel="stylesheet" />
+
+  <style>
+    body, html, #map { margin:0; padding:0; height:100%; }
+    .panel {
+      position:absolute;
+      top:10px; right:10px;
+      background:#fff;
+      padding:12px;
+      max-width:320px;
+      font:13px/1.4 sans-serif;
+      border-radius:6px;
+      box-shadow:0 1px 4px rgba(0,0,0,0.2);
+      overflow-y:auto;
+      max-height:90%;
+    }
+    .filters {
+      margin-bottom:12px;
+      padding-bottom:8px;
+      border-bottom:1px solid #ccc;
+    }
+    .filters label { display:block; margin-top:6px; font-weight:bold; }
+    .filters select { width:100%; }
+    .legend {
+      margin-top:10px;
+      padding-top:6px;
+      border-top:1px solid #ccc;
+    }
+    .legend div { margin:2px 0; }
+    .legend span {
+      display:inline-block;
+      width:14px; height:14px;
+      margin-right:6px;
+      vertical-align:middle;
+    }
+    .segment-info {
+      margin-top:12px;
+      font-size:12px;
+      line-height:1.4;
+      background:#f9f9f9;
+      padding:8px;
+      border-radius:6px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+    <!-- Right-side panel -->
+  <div class="panel">
+    <h3>Northern Rail Catchment & Consumer Segmentation Explorer</h3>
+    <p>
+      This map shows <b>station catchment areas</b> – the neighborhoods (LSOAs) 
+      from which passengers travel to <b>Harrogate</b>, <b>St Helens</b>, and <b>Worksop</b> stations.
+      Catchments are grouped into three categories:
+      <ul>
+        <li><b>Primary</b> – Areas with the highest concentration of station users</li>
+        <li><b>Secondary</b> – Areas with moderate passenger flows</li>
+        <li><b>Tertiary</b> – Wider zones contributing occasional or lower-frequency users</li>
+      </ul>
+      This project identifies <b>who the station’s customers are, where they come from, 
+      and what their retail preferences might be</b>. These insights can inform 
+      <b>retail planning, marketing, and service design</b> at stations.
+    </p>
+    
+
+    <!-- Filters -->
+    <div class="filters">
+      <label for="station">Station:</label>
+      <select id="station">
+        <option value="all">All</option>
+        <option value="Harrogate">Harrogate</option>
+        <option value="st_helen">St Helens</option>
+        <option value="worksop">Worksop</option>
+      </select>
+
+      <label for="category">Catchment Category:</label>
+      <select id="category">
+        <option value="all">All</option>
+        <option value="Primary">Primary</option>
+        <option value="Secondary">Secondary</option>
+        <option value="Tertiary">Tertiary</option>
+      </select>
+
+      <label for="segment">Dominant Segment:</label>
+      <select id="segment">
+        <option value="all">All</option>
+        <option value="Aspiring Homemakers">Aspiring Homemakers</option>
+        <option value="Family Basics">Family Basics</option>
+        <option value="Modest Traditions">Modest Traditions</option>
+        <option value="City Prosperity">City Prosperity</option>
+        <option value="Transient Renters">Transient Renters</option>
+        <option value="Municipal Tenants">Municipal Tenants</option>
+        <option value="Prestige Positions">Prestige Positions</option>
+        <option value="Rural Reality">Rural Reality</option>
+        <option value="Vintage Value">Vintage Value</option>
+        <option value="Domestic Success">Domestic Success</option>
+        <option value="Urban Cohesion">Urban Cohesion</option>
+        <option value="Country Living">Country Living</option>
+        <option value="Senior Security">Senior Security</option>
+        <option value="Rental Hubs">Rental Hubs</option>
+        <option value="Suburban Stability">Suburban Stability</option>
+      </select>
+    </div>
+
+      <!-- Legend -->
+
+    <div class="legend">
+      <strong>Catchment Category</strong>
+      <div><span style="background:#E34829"></span>Primary</div>
+      <div><span style="background:#E3A229"></span>Secondary</div>
+      <div><span style="background:#F5F214"></span>Tertiary</div>
+    </div>
+
+
+    <!-- Segment Info -->
+    <div class="segment-info" id="segment-info">
+      <em>Select a consumer segment above to view details...</em>
+    </div>
+  </div>
+
+  <!-- MapLibre & PMTiles -->
+  <script src="https://unpkg.com/maplibre-gl@3.6.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/pmtiles@3.0.6/dist/pmtiles.js"></script>
+
+  <script>
+    const protocol = new pmtiles.Protocol();
+    maplibregl.addProtocol("pmtiles", protocol.tile);
+    protocol.add(new pmtiles.PMTiles("data/catchments.pmtiles"));
+
+    const map = new maplibregl.Map({
+      container: "map",
+      style: {
+        version: 8,
+        sources: {
+          basemap: {
+            type: "raster",
+            tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256
+          },
+          catchments: {
+            type: "vector",
+            url: "pmtiles://data/catchments.pmtiles"
+          }
+        },
+        layers: [
+          { id: "basemap", type: "raster", source: "basemap" },
+          {
+            id: "catchments-fill",
+            type: "fill",
+            source: "catchments",
+            "source-layer": "catchments",
+            paint: {
+              "fill-color": [
+                "match", ["get", "Catchment_Category"],
+                "Primary", "#E34829",
+                "Secondary", "#E3A229",
+                "Tertiary", "#F5F214",
+                "#ccc"
+              ],
+              "fill-opacity": 0.6
+            }
+          },
+          {
+            id: "catchments-outline",
+            type: "line",
+            source: "catchments",
+            "source-layer": "catchments",
+            paint: { "line-color": "#444", "line-width": 0.5 }
+          }
+        ]
+      },
+      center: [-1.5, 53.7],
+      zoom: 8
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    // Popup
+    map.on("click", "catchments-fill", e => {
+      const p = e.features[0].properties;
+      new maplibregl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML(`
+          <strong>${p.Catchment_Name}</strong><br/>
+          <b>Station:</b> ${p.Station}<br/>
+          <b>Category:</b> ${p.Catchment_Category}<br/>
+          <b>Dominant Segment:</b> ${p.Dominant_Segment}
+        `)
+        .addTo(map);
+    });
+
+    // Segment descriptions
+
+
+    const segmentDescriptions = {
+  "City Prosperity": "Affluent urban professionals with high disposable incomes. Regular users of premium retail, branded goods, and financial services. Strong online shopping and digital media usage.",
+  "Prestige Positions": "Wealthy households in desirable suburbs. Spend heavily on luxury goods, dining, and travel. Brand loyal and responsive to quality-oriented marketing.",
+  "Country Living": "Rural households with higher incomes. Spend on cars, home improvement, gardening, and leisure. Less frequent but higher-value shopping trips.",
+  "Rural Reality": "Lower-income rural families and older households. Budget-conscious, rely on local shops and essential goods. Less digitally engaged.",
+  "Senior Security": "Retired homeowners with pensions. Spend moderately on comfort goods, health, and leisure. Prefer traditional shopping over online.",
+  "Suburban Stability": "Middle-income families and older couples. Focus on groceries, home, and family services. Responsive to value-driven retail offers.",
+  "Domestic Success": "Comfortable suburban families. Higher spend on homes, cars, and family leisure. Mix of online and in-store shopping.",
+  "Aspiring Homemakers": "Younger couples and families building careers. Style-conscious, aspirational, and open to new brands. Frequent users of supermarkets and online retail.",
+  "Family Basics": "Households with limited budgets. Spend cautiously, focus on value retailers and discounts. Highly sensitive to promotions.",
+  "Transient Renters": "Younger renters in cities. Spend on convenience, technology, and lifestyle goods. Strong users of online shopping and delivery apps.",
+  "Municipal Tenants": "Low-income households in social housing. Price-driven shoppers reliant on discount retailers. Limited brand loyalty.",
+  "Vintage Value": "Older people on modest incomes. Conservative shoppers, value stability and affordability. Prefer traditional retail outlets.",
+  "Modest Traditions": "Older households with modest earnings. Price-conscious and cautious spending patterns.",
+  "Urban Cohesion": "Diverse, multi-ethnic urban communities. Mix of budgets and shopping preferences. Strong local loyalty and cultural influences.",
+  "Rental Hubs": "Young, cosmopolitan professionals. Spend heavily on lifestyle, eating out, and technology. Digitally savvy and frequent online shoppers."
+    };
+
+
+    // Update filters
+    function applyFilters() {
+      const station = document.getElementById("station").value;
+      const category = document.getElementById("category").value;
+      const segment = document.getElementById("segment").value;
+
+      let filters = ["all"];
+      if (station !== "all") filters.push(["==", ["get", "Station"], station]);
+      if (category !== "all") filters.push(["==", ["get", "Catchment_Category"], category]);
+      if (segment !== "all") filters.push(["==", ["get", "Dominant_Segment"], segment]);
+
+      map.setFilter("catchments-fill", filters);
+      map.setFilter("catchments-outline", filters);
+
+      // Update info box
+      const infoBox = document.getElementById("segment-info");
+      if (segment !== "all") {
+        infoBox.innerHTML = `<strong>${segment}</strong><br/>${segmentDescriptions[segment] || ""}`;
+      } else {
+        infoBox.innerHTML = `<em>Select a consumer segment above to view details...</em>`;
+      }
+    }
+
+    document.getElementById("station").addEventListener("change", applyFilters);
+    document.getElementById("category").addEventListener("change", applyFilters);
+    document.getElementById("segment").addEventListener("change", applyFilters);
+  </script>
+</body>
+</html>
